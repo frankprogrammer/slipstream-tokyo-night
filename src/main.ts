@@ -8,6 +8,7 @@ import { PlayerTaxi } from './engine/PlayerTaxi';
 import { TrafficSpawner } from './engine/TrafficSpawner';
 import { CollisionSystem } from './engine/CollisionSystem';
 import { CameraController } from './engine/CameraController';
+import { RainSystem } from './engine/RainSystem';
 import { SlipstreamZone } from './engine/SlipstreamZone';
 import { ChainManager } from './engine/ChainManager';
 import { ScoreManager } from './engine/ScoreManager';
@@ -94,10 +95,12 @@ const chainManager = new ChainManager();
 const scoreManager = new ScoreManager();
 const hud = new HUD();
 const gameOverScreen = new GameOverScreen();
+const rainSystem = new RainSystem();
 
 scene.add(roadManager.group);
 scene.add(trafficSpawner.group);
 scene.add(playerTaxi.group);
+scene.add(rainSystem.group);
 
 let runTimeMs = 0;
 let distanceUnits = 0;
@@ -156,6 +159,8 @@ function animate(): void {
   requestAnimationFrame(animate);
   const delta = clock.getDelta();
   const nowMs = performance.now();
+
+  rainSystem.update(delta, camera);
 
   if (gameState.isPlaying) {
     runTimeMs += delta * 1000;
