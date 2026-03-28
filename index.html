@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>Slipstream: Tokyo Night</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #08050E; }
+    #game-container {
+      width: 100%; height: 100%;
+      position: relative;
+      touch-action: none;
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+
+    /* HUD Overlay */
+    #hud {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      pointer-events: none;
+      z-index: 10;
+      font-family: 'Orbitron', sans-serif;
+      text-align: center;
+      padding-top: 40px;
+    }
+    #score {
+      font-size: 28px;
+      font-weight: 900;
+      color: #F0E8FF;
+      text-shadow: 0 0 20px rgba(180,77,255,0.3);
+      letter-spacing: 2px;
+    }
+    #chain {
+      font-size: 18px;
+      font-weight: 700;
+      color: #FF2D7B;
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+      letter-spacing: 1px;
+    }
+    #chain.active { opacity: 1; }
+
+    #draft-meter {
+      position: absolute;
+      bottom: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px; height: 60px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    #draft-meter.active { opacity: 1; }
+
+    #milestone-text {
+      position: absolute;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 36px;
+      font-weight: 900;
+      color: #FF2D7B;
+      text-shadow: 0 0 40px rgba(255,45,123,0.6), 0 0 80px rgba(255,45,123,0.3);
+      opacity: 0;
+      letter-spacing: 4px;
+      pointer-events: none;
+    }
+
+    /* Screen Flash */
+    #screen-flash {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255,45,123,0.3);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    /* Game Over Overlay */
+    #gameover {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(8,5,14,0.85);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+      font-family: 'Orbitron', sans-serif;
+      color: #F0E8FF;
+    }
+    #gameover.visible { display: flex; }
+    #gameover h2 {
+      font-size: 20px;
+      letter-spacing: 4px;
+      color: #FF2D7B;
+      margin-bottom: 20px;
+    }
+    #final-score {
+      font-size: 48px;
+      font-weight: 900;
+      margin-bottom: 8px;
+    }
+    #new-best {
+      font-size: 14px;
+      color: #00E5FF;
+      margin-bottom: 24px;
+      display: none;
+    }
+    .stat-row {
+      display: flex;
+      gap: 32px;
+      margin-bottom: 32px;
+      font-size: 14px;
+      color: #8A7FA3;
+      letter-spacing: 1px;
+    }
+    .stat-row span strong { color: #F0E8FF; }
+    #retry-btn {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: #F0E8FF;
+      background: transparent;
+      border: 2px solid #FF2D7B;
+      border-radius: 8px;
+      padding: 16px 48px;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s;
+      pointer-events: auto;
+    }
+    #retry-btn:hover, #retry-btn:active {
+      background: rgba(255,45,123,0.15);
+      box-shadow: 0 0 30px rgba(255,45,123,0.3);
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <!-- Three.js canvas injected here -->
+
+    <!-- HUD -->
+    <div id="hud">
+      <div id="score">0</div>
+      <div id="chain">×1</div>
+    </div>
+    <div id="draft-meter"></div>
+    <div id="milestone-text"></div>
+    <div id="screen-flash"></div>
+
+    <!-- Game Over -->
+    <div id="gameover">
+      <h2>GAME OVER</h2>
+      <div id="final-score">0</div>
+      <div id="new-best">⚡ NEW BEST</div>
+      <div class="stat-row">
+        <span>CHAIN <strong id="stat-chain">×0</strong></span>
+        <span>DIST <strong id="stat-distance">0m</strong></span>
+      </div>
+      <button id="retry-btn">RETRY</button>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
