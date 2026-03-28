@@ -193,12 +193,14 @@ function animate(): void {
       trafficSpawner
     );
     chainManager.tick(nowMs, slip.inZone);
-    playerTaxi.setDrafting(slip.inZone);
 
     if (slip.slingshotFired) {
       burstRemainMs = CONFIG.SLINGSHOT_BURST_DURATION;
       slingshotTrail.burst(playerTaxi);
       const milestone = chainManager.onSlingshot(nowMs);
+      if (milestone !== null) {
+        playerTaxi.onChainMilestone(milestone, nowMs);
+      }
       scoreManager.addSlingshotBonus(chainManager.chain);
       if (milestone === 10) {
         hud.showMilestone('PERFECT', true);
@@ -207,6 +209,8 @@ function animate(): void {
         hud.showMilestone(`×${milestone}!`, false);
       }
     }
+
+    playerTaxi.tickRoofLight(nowMs, slip.inZone, chainManager.chain);
 
     scoreManager.addDistance(scrollDz, chainManager.chain);
     distanceUnits += scrollDz;
@@ -230,6 +234,7 @@ function animate(): void {
     trafficSpawner.setDraftTailHighlight(playerTaxi.getCollisionBounds(), false);
     slingshotTrail.update(delta, 0);
     cameraController.update(playerTaxi, 1);
+    playerTaxi.tickRoofLight(nowMs, false, chainManager.chain);
   }
 
   slipstreamWind.update(delta, gameState.isPlaying, trafficSpawner);

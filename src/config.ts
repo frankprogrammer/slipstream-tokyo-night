@@ -166,6 +166,15 @@ export const CONFIG = {
    * slipstream still uses full bounds. 0.9 ≈ 10% shorter front+back (forgiving).
    */
   TAXI_COLLISION_Z_HALF_SCALE: 0.9,
+  /** Roof lamp while drafting (空車 off). */
+  TAXI_ROOF_LIGHT_DRAFT: 0xffaa00,
+  /** ×10 milestone: neon pink flash window (CLAUDE.md). */
+  TAXI_ROOF_LIGHT_M10_FLASH_MS: 2000,
+  TAXI_ROOF_LIGHT_M10_PULSE_HZ: 5,
+  /** ×20: pink/blue alternation rate while chain ≥ 20. */
+  TAXI_ROOF_LIGHT_M20_STROBE_HZ: 7,
+  /** Draft amber pulse: passed as `sin(nowMs * scale)`. */
+  TAXI_ROOF_LIGHT_DRAFT_PULSE_SCALE: 0.007,
 
   // ── Scoring ──
   DISTANCE_SCORE_RATE: 1,

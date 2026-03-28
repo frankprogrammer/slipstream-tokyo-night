@@ -16,6 +16,9 @@ export class PlayerTaxi {
   private readonly draftFill: THREE.Mesh;
   private readonly frontWheels: THREE.Mesh[] = [];
   private readonly dims = CONFIG.TAXI_DIMENSIONS;
+  private roofMilestone10EndMs = 0;
+  private readonly _roofDraft = new THREE.Color();
+  private readonly _roofScratch = new THREE.Color();
 
   constructor() {
     this.group.name = 'PlayerTaxi';
@@ -221,7 +224,8 @@ export class PlayerTaxi {
     this.group.rotation.set(0, 0, 0);
     this.chassisGroup.rotation.set(0, 0, 0);
     for (const w of this.frontWheels) w.rotation.y = 0;
-    this.setDrafting(false);
+    this.roofMilestone10EndMs = 0;
+    this.roofLightMat.color.setHex(CONFIG.PALETTE.TAXI_ROOF_LIGHT);
     this.setDraftMeter(0, false);
   }
 
@@ -233,10 +237,50 @@ export class PlayerTaxi {
     }
   }
 
-  setDrafting(isDrafting: boolean): void {
-    this.roofLightMat.color.setHex(
-      isDrafting ? 0xffaa00 : CONFIG.PALETTE.TAXI_ROOF_LIGHT
-    );
+  /**
+   * Call when `ChainManager.onSlingshot` returns a milestone (×5, ×10, …).
+   * Drives ×10 pink flash window; ×20 uses `chain` in `tickRoofLight`.
+   */
+  onChainMilestone(milestone: number, nowMs: number): void {
+    if (milestone === 10) {
+      this.roofMilestone10EndMs = nowMs + CONFIG.TAXI_ROOF_LIGHT_M10_FLASH_MS;
+    }
+  }
+
+  /**
+   * Roof lamp: ×20 strobe → ×10 flash → draft pulse → vacant green (CLAUDE.md).
+   */
+  tickRoofLight(nowMs: number, isDrafting: boolean, chain: number): void {
+    const pink = CONFIG.PALETTE.NEON_PINK;
+    const blue = CONFIG.PALETTE.NEON_BLUE;
+    const vacant = CONFIG.PALETTE.TAXI_ROOF_LIGHT;
+
+    if (chain >= 20) {
+      const hz = CONFIG.TAXI_ROOF_LIGHT_M20_STROBE_HZ;
+      const toggle = Math.floor((nowMs * hz) / 1000) % 2;
+      this.roofLightMat.color.setHex(toggle === 0 ? pink : blue);
+      return;
+    }
+
+    if (nowMs < this.roofMilestone10EndMs) {
+      const hz = CONFIG.TAXI_ROOF_LIGHT_M10_PULSE_HZ;
+      const wave = Math.sin((nowMs / 1000) * Math.PI * 2 * hz) * 0.5 + 0.5;
+      this._roofScratch.setHex(pink);
+      this._roofScratch.multiplyScalar(0.45 + 0.55 * wave);
+      this.roofLightMat.color.copy(this._roofScratch);
+      return;
+    }
+
+    if (isDrafting) {
+      this._roofDraft.setHex(CONFIG.TAXI_ROOF_LIGHT_DRAFT);
+      const wobble =
+        0.82 + 0.18 * Math.sin(nowMs * CONFIG.TAXI_ROOF_LIGHT_DRAFT_PULSE_SCALE);
+      this._roofScratch.copy(this._roofDraft).multiplyScalar(wobble);
+      this.roofLightMat.color.copy(this._roofScratch);
+      return;
+    }
+
+    this.roofLightMat.color.setHex(vacant);
   }
 
   setDraftMeter(fill01: number, visible: boolean): void {
