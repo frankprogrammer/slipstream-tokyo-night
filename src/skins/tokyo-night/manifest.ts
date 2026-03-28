@@ -73,6 +73,6 @@ export const SKIN_MANIFEST = {
     toneMappingExposure: 1.0,
   },
 
-  // ── Neon Sign Colors (randomly selected per sign) ──
+  // ── Neon Sign Colors (reference; engine uses CONFIG.NEON_SIGN_COLORS) ──
   neonSignColors: [0xFF2D7B, 0x00E5FF, 0xB44DFF, 0xFF6B2D, 0x00FF88, 0xFFEE00],
 };

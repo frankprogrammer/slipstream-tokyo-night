@@ -1,9 +1,6 @@
 import * as THREE from 'three';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { CONFIG } from './config';
+import { createBloomComposer, resizeBloomComposer } from './engine/postProcessing';
 import { GameState } from './engine/GameState';
 import { LaneSystem } from './engine/LaneSystem';
 import { RoadManager } from './engine/RoadManager';
@@ -20,7 +17,7 @@ import { HUD } from './ui/HUD';
 /**
  * Slipstream: Tokyo Night — Main Entry Point
  *
- * Phase 2: slipstream draft, slingshot burst, chain, score, HUD, game over.
+ * Phase 2+: slipstream, chain, score, HUD, game over; post-processing in `postProcessing.ts`.
  */
 
 const container = document.getElementById('game-container')!;
@@ -32,7 +29,7 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
+renderer.toneMappingExposure = CONFIG.TONE_MAPPING_EXPOSURE;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 container.prepend(renderer.domElement);
 
@@ -73,20 +70,8 @@ dirLight.position.set(
 dirLight.castShadow = false;
 scene.add(dirLight);
 
-const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
-
-const bloomPass = new UnrealBloomPass(
-  new THREE.Vector2(
-    window.innerWidth * CONFIG.BLOOM_RESOLUTION_SCALE,
-    window.innerHeight * CONFIG.BLOOM_RESOLUTION_SCALE
-  ),
-  CONFIG.BLOOM_INTENSITY,
-  CONFIG.BLOOM_RADIUS,
-  CONFIG.BLOOM_THRESHOLD
-);
-composer.addPass(bloomPass);
-composer.addPass(new OutputPass());
+const bloomBundle = createBloomComposer(renderer, scene, camera);
+const { composer } = bloomBundle;
 
 window.addEventListener('resize', () => {
   const w = window.innerWidth;
@@ -94,11 +79,7 @@ window.addEventListener('resize', () => {
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   renderer.setSize(w, h);
-  composer.setSize(w, h);
-  bloomPass.resolution.set(
-    w * CONFIG.BLOOM_RESOLUTION_SCALE,
-    h * CONFIG.BLOOM_RESOLUTION_SCALE
-  );
+  resizeBloomComposer(bloomBundle, w, h);
 });
 
 const gameState = new GameState();

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CONFIG } from '../config';
+import { CONFIG, NEON_SIGN_COLORS } from '../config';
 
 /**
  * Procedural dark asphalt albedo map (CanvasTexture, tiled on road planes).
@@ -41,6 +41,60 @@ function createAsphaltTexture(): THREE.CanvasTexture {
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
   return tex;
+}
+
+function hash01(n: number): number {
+  const t = Math.sin(n * 12.9898) * 43758.5453123;
+  return t - Math.floor(t);
+}
+
+/**
+ * Roadside neon: emissive billboard + dark pole (palette colors only).
+ * Deterministic per segment index + side so recycling stays stable.
+ */
+function addNeonSignToSegment(
+  root: THREE.Group,
+  segmentIndex: number,
+  side: -1 | 1,
+  L: number,
+  halfW: number
+): void {
+  const seed = segmentIndex * 97 + side * 53;
+  if (hash01(seed) >= CONFIG.PROP_DENSITY) return;
+
+  const zJitter = (hash01(seed + 1) - 0.5) * (L - 5.5);
+  const ci =
+    Math.floor(hash01(seed + 2) * NEON_SIGN_COLORS.length) % NEON_SIGN_COLORS.length;
+  const colorHex = NEON_SIGN_COLORS[ci]!;
+
+  const xSign = side * (halfW + CONFIG.ROAD_NEON_OFFSET_X);
+  const poleH = 1.35;
+  const poleMat = new THREE.MeshStandardMaterial({
+    color: 0x1a1a20,
+    roughness: 0.94,
+    metalness: 0.18,
+  });
+  const pole = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.065, 0.085, poleH, 6),
+    poleMat
+  );
+  pole.position.set(xSign, poleH / 2, zJitter);
+  root.add(pole);
+
+  const faceMat = new THREE.MeshStandardMaterial({
+    color: colorHex,
+    emissive: colorHex,
+    emissiveIntensity: CONFIG.ROAD_NEON_EMISSIVE,
+    roughness: 0.22,
+    metalness: 0.06,
+  });
+  const bh = 1.28;
+  const board = new THREE.Mesh(
+    new THREE.BoxGeometry(1.05, bh, 0.14),
+    faceMat
+  );
+  board.position.set(xSign + side * 0.07, poleH + bh / 2, zJitter);
+  root.add(board);
 }
 
 /**
@@ -147,6 +201,9 @@ export class RoadManager {
       const rightEdge = new THREE.Mesh(curbGeo, edgeMat);
       rightEdge.position.set(halfW, 0.05, 0);
       root.add(rightEdge);
+
+      addNeonSignToSegment(root, i, -1, L, halfW);
+      addNeonSignToSegment(root, i, 1, L, halfW);
 
       this.group.add(root);
       this.segments.push({ root, zCenter });

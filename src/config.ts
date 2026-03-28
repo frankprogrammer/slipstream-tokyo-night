@@ -58,7 +58,12 @@ export const CONFIG = {
   ROAD_LANE_EDGE_INSET: 0.38,
   /** Lane marking emissive intensity (bloom; keep modest). */
   ROAD_LANE_MARKING_EMISSIVE: 0.18,
+  /** Chance per road side per segment to spawn a roadside neon sign (0–1). */
   PROP_DENSITY: 0.6,
+  /** X distance from road center to neon sign (past curb). */
+  ROAD_NEON_OFFSET_X: 0.55,
+  /** Neon sign face emissive intensity (bloom). */
+  ROAD_NEON_EMISSIVE: 1.15,
   FOG_NEAR: 15,
   FOG_FAR: 60,
   FOG_COLOR: 0x08050e,
@@ -147,11 +152,16 @@ export const CONFIG = {
   CHAIN_POP_SCALE: 1.3,
   CHAIN_POP_DURATION: 200,
 
-  // ── Post-Processing ──
-  BLOOM_INTENSITY: 0.45,
-  BLOOM_THRESHOLD: 0.2,
-  BLOOM_RADIUS: 0.4,
+  // ── Post-Processing (UnrealBloom — CLAUDE.md Phase 3) ──
+  /** Bloom strength; emissive + bright HDR pixels. */
+  BLOOM_INTENSITY: 0.4,
+  /** Higher = only very bright pixels bloom (keeps mid-gray road from glowing). */
+  BLOOM_THRESHOLD: 0.1,
+  BLOOM_RADIUS: 0.2,
+  /** Bloom buffer scale (GPU savings; <1 = half-res bloom pass). */
   BLOOM_RESOLUTION_SCALE: 0.5,
+  /** ACESFilmic exposure. */
+  TONE_MAPPING_EXPOSURE: 1.0,
 
   // ── Particles ──
   SPEED_LINES_COUNT: 30,
@@ -204,4 +214,13 @@ export const TRAFFIC_PAINT_COLORS = [
   CONFIG.PALETTE.NEON_BLUE,
   CONFIG.PALETTE.NEON_PURPLE,
   CONFIG.PALETTE.NEON_ORANGE,
+] as const;
+
+/** Roadside neon signs — all `PALETTE` neons + accent (tune variety). */
+export const NEON_SIGN_COLORS = [
+  CONFIG.PALETTE.NEON_PINK,
+  CONFIG.PALETTE.NEON_BLUE,
+  CONFIG.PALETTE.NEON_PURPLE,
+  CONFIG.PALETTE.NEON_ORANGE,
+  CONFIG.PALETTE.TAXI_ROOF_LIGHT,
 ] as const;
