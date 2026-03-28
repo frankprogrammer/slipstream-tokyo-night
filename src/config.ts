@@ -91,6 +91,24 @@ export const CONFIG = {
   /** Tail light color multiplier while player is in that vehicle's slipstream (HDR-friendly). */
   DRAFT_TAIL_BRIGHTNESS_MUL: 4.0,
 
+  /** Points per traffic pool slot; fills the slipstream box behind each active vehicle. */
+  SLIPSTREAM_WIND_PARTICLES_PER_VEHICLE: 8,
+  SLIPSTREAM_WIND_POINT_SIZE: 0.065,
+  SLIPSTREAM_WIND_OPACITY: 0.5,
+  /** Soft cyan; reads as disturbed air (bloom picks up slightly bright points). */
+  SLIPSTREAM_WIND_COLOR: 0xa8e8ff,
+  /** Base Y and ± spread for wind points above the road. */
+  SLIPSTREAM_WIND_Y: 0.52,
+  SLIPSTREAM_WIND_Y_SPREAD: 0.38,
+  /** Wake flow toward screen bottom (−Z world), units/sec (vehicle-relative). */
+  SLIPSTREAM_WIND_DOWN_SPEED: 6.5,
+  /** Lateral jitter along the side strips only (units/sec scale). */
+  SLIPSTREAM_WIND_TURBULENCE: 1.1,
+  /** Inset from slipstream X edges for side columns. */
+  SLIPSTREAM_WIND_X_INSET: 0.1,
+  /** Width of each left/right spawn column inside the zone. */
+  SLIPSTREAM_WIND_SIDE_STRIP_WIDTH: 0.24,
+
   // ── Chain ──
   CHAIN_TIMEOUT: 3000,
   CHAIN_MILESTONES: [5, 10, 15, 20] as readonly number[],
@@ -138,9 +156,9 @@ export const CONFIG = {
   TRAFFIC_SPAWN_MIN_Z_BUFFER: 6,
 
   // ── Player Taxi ──
-  TAXI_BODY_ROLL: 5,
-  TAXI_ROLL_DURATION: 200,
-  TAXI_WHEEL_TURN: 15,
+  TAXI_BODY_ROLL: -10,
+  TAXI_ROLL_DURATION: 300,
+  TAXI_WHEEL_TURN: 5,
   TAXI_POSITION_Z: 0,
   TAXI_DIMENSIONS: { width: 1.8, height: 0.8, length: 3.5 },
   /**

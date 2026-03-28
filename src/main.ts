@@ -9,6 +9,7 @@ import { TrafficSpawner } from './engine/TrafficSpawner';
 import { CollisionSystem } from './engine/CollisionSystem';
 import { CameraController } from './engine/CameraController';
 import { RainSystem } from './engine/RainSystem';
+import { SlipstreamWindSystem } from './engine/SlipstreamWindSystem';
 import { SlingshotTrailSystem } from './engine/SlingshotTrailSystem';
 import { SlipstreamZone } from './engine/SlipstreamZone';
 import { ChainManager } from './engine/ChainManager';
@@ -97,10 +98,12 @@ const scoreManager = new ScoreManager();
 const hud = new HUD();
 const gameOverScreen = new GameOverScreen();
 const rainSystem = new RainSystem();
+const slipstreamWind = new SlipstreamWindSystem();
 const slingshotTrail = new SlingshotTrailSystem();
 
 scene.add(roadManager.group);
 scene.add(trafficSpawner.group);
+scene.add(slipstreamWind.group);
 scene.add(playerTaxi.group);
 scene.add(rainSystem.group);
 scene.add(slingshotTrail.group);
@@ -117,6 +120,7 @@ function resetGame(): void {
   burstRemainMs = 0;
   roadManager.reset();
   trafficSpawner.reset();
+  slipstreamWind.reset();
   playerTaxi.reset();
   slingshotTrail.reset();
   slipstreamZone.reset();
@@ -227,6 +231,8 @@ function animate(): void {
     slingshotTrail.update(delta, 0);
     cameraController.update(playerTaxi, 1);
   }
+
+  slipstreamWind.update(delta, gameState.isPlaying, trafficSpawner);
 
   if (showFps && fpsEl) {
     fpsAcc += delta;

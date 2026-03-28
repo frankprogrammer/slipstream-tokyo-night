@@ -236,6 +236,30 @@ export class TrafficSpawner {
     this.separateOverlappingTraffic();
   }
 
+  /**
+   * One callback per pool slot (stable index). Used by slipstream wind visuals.
+   * When `active` is false, `cx`/`cz`/`hz` are unused.
+   */
+  forEachPoolWindSlot(
+    cb: (
+      slotIndex: number,
+      active: boolean,
+      cx: number,
+      cz: number,
+      hz: number
+    ) => void
+  ): void {
+    for (let i = 0; i < this.pool.length; i++) {
+      const p = this.pool[i]!;
+      if (!p.active) {
+        cb(i, false, 0, 0, 0);
+        continue;
+      }
+      const dims = p.typeIndex === 0 ? COMPACT : TRUCK;
+      cb(i, true, p.group.position.x, p.group.position.z, dims.d / 2);
+    }
+  }
+
   getActiveCollisionBounds(): TrafficCollisionBounds[] {
     const out: TrafficCollisionBounds[] = [];
     for (const p of this.pool) {

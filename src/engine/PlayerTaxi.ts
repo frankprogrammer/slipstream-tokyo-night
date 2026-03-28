@@ -145,6 +145,7 @@ export class PlayerTaxi {
       const w = new THREE.Mesh(wheelGeo, darkMat);
       w.position.set(x, wy, z);
       this.chassisGroup.add(w);
+      if (z === wzF) this.frontWheels.push(w);
     }
 
     // Headlights
