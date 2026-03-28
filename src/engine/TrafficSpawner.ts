@@ -7,6 +7,7 @@ import {
   buildCompactTrafficMesh,
   buildTruckTrafficMesh,
 } from './TrafficVehicleVisuals';
+import { playerInVehicleSlipstream } from './slipstreamOverlap';
 
 export type TrafficCollisionBounds = {
   cx: number;
@@ -21,6 +22,8 @@ type PoolEntry = {
   laneIndex: number;
   speedMul: number;
   typeIndex: 0 | 1;
+  tailMaterial: THREE.MeshBasicMaterial;
+  tailBaseColor: THREE.Color;
 };
 
 /**
@@ -32,6 +35,7 @@ export class TrafficSpawner {
   private readonly pool: PoolEntry[] = [];
   private spawnAccMs = 0;
   private readonly despawnBehindZ = 25;
+  private draftTailHighlight: PoolEntry | null = null;
 
   constructor() {
     this.group.name = 'TrafficGroup';
@@ -45,11 +49,13 @@ export class TrafficSpawner {
     const g = new THREE.Group();
     const paint =
       TRAFFIC_PAINT_COLORS[paintSlotIndex % TRAFFIC_PAINT_COLORS.length]!;
-    const visual =
+    const built =
       typeIndex === 0
         ? buildCompactTrafficMesh(COMPACT, paint)
         : buildTruckTrafficMesh(TRUCK, paint);
-    g.add(visual);
+    g.add(built.root);
+    const tailMaterial = built.tailMaterial;
+    const tailBaseColor = tailMaterial.color.clone();
 
     g.visible = false;
     this.group.add(g);
@@ -59,6 +65,8 @@ export class TrafficSpawner {
       laneIndex: 1,
       speedMul: 1,
       typeIndex,
+      tailMaterial,
+      tailBaseColor,
     };
   }
 
@@ -181,5 +189,60 @@ export class TrafficSpawner {
       });
     }
     return out;
+  }
+
+  /**
+   * Brightens the draft target's tail lights (shared material for both lamps).
+   * Call each frame while playing; `active` false restores the previous target.
+   */
+  setDraftTailHighlight(
+    pb: { cx: number; cz: number; hx: number; hz: number },
+    active: boolean
+  ): void {
+    if (!active) {
+      this.clearDraftTailHighlight();
+      return;
+    }
+    const target = this.findDraftTarget(pb);
+    if (target) {
+      if (this.draftTailHighlight !== target) {
+        this.clearDraftTailHighlight();
+        this.draftTailHighlight = target;
+        target.tailMaterial.color
+          .copy(target.tailBaseColor)
+          .multiplyScalar(CONFIG.DRAFT_TAIL_BRIGHTNESS_MUL);
+      }
+    } else {
+      this.clearDraftTailHighlight();
+    }
+  }
+
+  private clearDraftTailHighlight(): void {
+    if (this.draftTailHighlight) {
+      this.draftTailHighlight.tailMaterial.color.copy(
+        this.draftTailHighlight.tailBaseColor
+      );
+      this.draftTailHighlight = null;
+    }
+  }
+
+  private findDraftTarget(pb: {
+    cx: number;
+    cz: number;
+    hx: number;
+    hz: number;
+  }): PoolEntry | null {
+    for (const p of this.pool) {
+      if (!p.active) continue;
+      const dims = p.typeIndex === 0 ? COMPACT : TRUCK;
+      const v: TrafficCollisionBounds = {
+        cx: p.group.position.x,
+        cz: p.group.position.z,
+        hx: dims.w / 2,
+        hz: dims.d / 2,
+      };
+      if (playerInVehicleSlipstream(pb, v)) return p;
+    }
+    return null;
   }
 }

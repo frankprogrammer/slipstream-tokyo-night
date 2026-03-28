@@ -85,6 +85,8 @@ export const CONFIG = {
   DRAFT_BAR_DEPTH: 0.1,
   DRAFT_BAR_OFFSET_Y: 0.035,
   DRAFT_BAR_INSET_FROM_FRONT: 0.38,
+  /** Tail light color multiplier while player is in that vehicle's slipstream (HDR-friendly). */
+  DRAFT_TAIL_BRIGHTNESS_MUL: 4.0,
 
   // ── Chain ──
   CHAIN_TIMEOUT: 3000,

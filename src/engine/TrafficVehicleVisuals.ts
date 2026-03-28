@@ -12,7 +12,10 @@ export const TRUCK = { w: 2.0, h: 1.2, d: 4.5 } as const;
  * Geometry stays within the collision box dims.
  */
 /** @param paintColor — hex from `TRAFFIC_PAINT_COLORS` / `PALETTE` */
-export function buildCompactTrafficMesh(d: typeof COMPACT, paintColor: number): THREE.Group {
+export function buildCompactTrafficMesh(
+  d: typeof COMPACT,
+  paintColor: number
+): { root: THREE.Group; tailMaterial: THREE.MeshBasicMaterial } {
   const root = new THREE.Group();
   const { w: W, h: H, d: L } = d;
   const bodyMat = new THREE.MeshStandardMaterial({
@@ -111,14 +114,17 @@ export function buildCompactTrafficMesh(d: typeof COMPACT, paintColor: number): 
   tr.position.x = W / 3;
   root.add(tr);
 
-  return root;
+  return { root, tailMaterial: tailMat };
 }
 
 /**
  * Box truck: cab forward + tall cargo box (fits TRUCK AABB).
  */
 /** @param paintColor — hex from `TRAFFIC_PAINT_COLORS` / `PALETTE` */
-export function buildTruckTrafficMesh(d: typeof TRUCK, paintColor: number): THREE.Group {
+export function buildTruckTrafficMesh(
+  d: typeof TRUCK,
+  paintColor: number
+): { root: THREE.Group; tailMaterial: THREE.MeshBasicMaterial } {
   const root = new THREE.Group();
   const { w: W, h: H, d: L } = d;
   const paint = new THREE.Color(paintColor);
@@ -224,5 +230,5 @@ export function buildTruckTrafficMesh(d: typeof TRUCK, paintColor: number): THRE
   tr.position.x = W / 3;
   root.add(tr);
 
-  return root;
+  return { root, tailMaterial: tailMat };
 }

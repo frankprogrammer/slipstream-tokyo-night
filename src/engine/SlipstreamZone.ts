@@ -1,6 +1,7 @@
 import { CONFIG } from '../config';
 import type { PlayerTaxi } from './PlayerTaxi';
 import type { TrafficCollisionBounds, TrafficSpawner } from './TrafficSpawner';
+import { playerInVehicleSlipstream } from './slipstreamOverlap';
 
 /**
  * SlipstreamZone — XZ overlap with a rectangle behind each active vehicle.
@@ -69,37 +70,9 @@ export class SlipstreamZone {
     pb: { cx: number; cz: number; hx: number; hz: number },
     vehicles: TrafficCollisionBounds[]
   ): boolean {
-    const zw = CONFIG.SLIPSTREAM_ZONE_WIDTH;
-    const zd = CONFIG.SLIPSTREAM_ZONE_DEPTH;
     for (const v of vehicles) {
-      if (this.overlapSlipstream(pb, v, zw, zd)) return true;
+      if (playerInVehicleSlipstream(pb, v)) return true;
     }
     return false;
-  }
-
-  /** Zone sits behind vehicle (toward −Z from rear bumper), same lane width span. */
-  private overlapSlipstream(
-    pb: { cx: number; cz: number; hx: number; hz: number },
-    v: TrafficCollisionBounds,
-    zoneW: number,
-    zoneDepth: number
-  ): boolean {
-    const rearZ = v.cz - v.hz;
-    const zMin = rearZ - zoneDepth;
-    const zMax = rearZ;
-    const xMin = v.cx - zoneW / 2;
-    const xMax = v.cx + zoneW / 2;
-
-    const pxMin = pb.cx - pb.hx;
-    const pxMax = pb.cx + pb.hx;
-    const pzMin = pb.cz - pb.hz;
-    const pzMax = pb.cz + pb.hz;
-
-    return (
-      pxMax > xMin &&
-      pxMin < xMax &&
-      pzMax > zMin &&
-      pzMin < zMax
-    );
   }
 }

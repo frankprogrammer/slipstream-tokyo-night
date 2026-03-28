@@ -204,10 +204,16 @@ function animate(): void {
     hud.updateScore(scoreManager.currentScore);
     hud.updateChain(chainManager.chain);
     playerTaxi.setDraftMeter(slip.meterDisplay, slip.inZone);
+    trafficSpawner.setDraftTailHighlight(
+      playerTaxi.getCollisionBounds(),
+      slip.inZone
+    );
 
     if (collisionSystem.check(playerTaxi, trafficSpawner)) {
       gameState.transition('gameover');
     }
+  } else {
+    trafficSpawner.setDraftTailHighlight(playerTaxi.getCollisionBounds(), false);
   }
 
   if (showFps && fpsEl) {
