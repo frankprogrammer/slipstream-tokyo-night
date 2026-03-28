@@ -111,6 +111,8 @@ scene.add(slingshotTrail.group);
 let runTimeMs = 0;
 let distanceUnits = 0;
 let burstRemainMs = 0;
+/** Extra base scroll from successful slipstreams this run (before burst). */
+let slingshotBaseBonus = 0;
 
 function resetGame(): void {
   gameState.reset();
@@ -118,6 +120,7 @@ function resetGame(): void {
   runTimeMs = 0;
   distanceUnits = 0;
   burstRemainMs = 0;
+  slingshotBaseBonus = 0;
   roadManager.reset();
   trafficSpawner.reset();
   slipstreamWind.reset();
@@ -174,8 +177,20 @@ function animate(): void {
   if (gameState.isPlaying) {
     runTimeMs += delta * 1000;
     burstRemainMs = Math.max(0, burstRemainMs - delta * 1000);
+
+    const base = CONFIG.BASE_SCROLL_SPEED;
+    const maxScroll = CONFIG.MAX_SCROLL_SPEED;
+    const headroom = Math.max(0, maxScroll - base);
+    const timeRamp = Math.min(
+      runTimeMs * CONFIG.SPEED_RAMP_RATE,
+      headroom
+    );
+    const baseScroll = Math.min(
+      base + timeRamp + slingshotBaseBonus,
+      maxScroll
+    );
     const scrollPerFrame =
-      CONFIG.BASE_SCROLL_SPEED +
+      baseScroll +
       (burstRemainMs > 0 ? CONFIG.SLINGSHOT_SPEED_BURST : 0);
     const scrollDz = scrollPerFrame * 60 * delta;
 
@@ -195,6 +210,7 @@ function animate(): void {
     chainManager.tick(nowMs, slip.inZone);
 
     if (slip.slingshotFired) {
+      slingshotBaseBonus += CONFIG.SLINGSHOT_BASE_SPEED_INCREMENT;
       burstRemainMs = CONFIG.SLINGSHOT_BURST_DURATION;
       slingshotTrail.burst(playerTaxi);
       const milestone = chainManager.onSlingshot(nowMs);

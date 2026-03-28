@@ -71,12 +71,20 @@ export const CONFIG = {
   FOG_FAR: 60,
   FOG_COLOR: 0x08050e,
 
-  // ── Speed ──
+  // ── Speed (scrollPerFrame units; see main.ts `effectiveBaseScroll`) ──
+  /** Starting base scroll at run start (before time ramp / slingshot bonus). */
   BASE_SCROLL_SPEED: 0.15,
-  MAX_SCROLL_SPEED: 0.8,
-  SPEED_RAMP_RATE: 0.0001,
+  /** Hard cap on base scroll (time ramp + slingshot bonus included; burst adds on top). */
+  MAX_SCROLL_SPEED: 0.25,
+  /**
+   * Linear ramp over run time: adds up to `(MAX − BASE)` by `runTimeMs × this`.
+   * Example: BASE 0.15, MAX 0.8 → headroom 0.65; at 0.00005/ms, full ramp ≈ 13s.
+   */
+  SPEED_RAMP_RATE: 0.00005,
   SLINGSHOT_SPEED_BURST: 0.1,
   SLINGSHOT_BURST_DURATION: 750,
+  /** Added to base scroll on each successful slipstream release (same units as BASE_SCROLL_SPEED). */
+  SLINGSHOT_BASE_SPEED_INCREMENT: 8,
 
   // ── Slipstream ──
   SLIPSTREAM_ZONE_WIDTH: 2.0,
