@@ -7,8 +7,9 @@ function easeOutBack(t: number): number {
 }
 
 /**
- * LaneSystem — 3-lane grid + swipe/keyboard input.
+ * LaneSystem — 3-lane grid + touch + keyboard.
  * Lane centers: -LANE_WIDTH, 0, +LANE_WIDTH for indices 0,1,2.
+ * Touch: pointerdown left/right of screen center = one lane step; pointermove maps X to three lane columns.
  */
 export class LaneSystem {
   private readonly target: HTMLElement;
@@ -21,10 +22,9 @@ export class LaneSystem {
   private _rollSpringing = false;
   private _springStartMs = 0;
   private _springDir: -1 | 1 = 1;
+  private _pointerId: number | null = null;
   private _pointerDownX = 0;
   private _pointerDownY = 0;
-  private _pointerDownTime = 0;
-  private _pointerId: number | null = null;
   private _enabled = true;
 
   constructor(target: HTMLElement) {
@@ -129,26 +129,61 @@ export class LaneSystem {
     this._switchStartMs = performance.now();
   }
 
+  /** Move one lane toward `targetLane` when not already switching. */
+  private tryStepTowardLane(targetLane: number): void {
+    if (!this._enabled || this._switching) return;
+    const t = Math.max(0, Math.min(CONFIG.LANE_COUNT - 1, targetLane));
+    if (t === this._laneIndex) return;
+    if (t < this._laneIndex) this.tryBeginSwitch(-1);
+    else this.tryBeginSwitch(1);
+  }
+
+  /** Map client X to lane index using equal-width columns across `target`. */
+  private clientXToLaneIndex(clientX: number): number {
+    const rect = this.target.getBoundingClientRect();
+    const w = Math.max(1e-6, rect.width);
+    const u = (clientX - rect.left) / w;
+    return Math.max(
+      0,
+      Math.min(CONFIG.LANE_COUNT - 1, Math.floor(u * CONFIG.LANE_COUNT))
+    );
+  }
+
+  /**
+   * Pointerdown: left/right of horizontal center → one lane step.
+   * Matches keyboard arrow chase mapping (ArrowLeft / left half → +1, ArrowRight / right half → −1).
+   */
+  private onTouchCenterHalf(clientX: number): void {
+    const rect = this.target.getBoundingClientRect();
+    const cx = rect.left + rect.width * 0.5;
+    const dead = CONFIG.TOUCH_CENTER_DEAD_ZONE_PX;
+    if (Math.abs(clientX - cx) <= dead) return;
+    if (clientX < cx) this.tryBeginSwitch(1);
+    else this.tryBeginSwitch(-1);
+  }
+
   private bindPointer(): void {
     this.target.addEventListener('pointerdown', (e: PointerEvent) => {
       if (!this._enabled || this._pointerId !== null) return;
       this._pointerId = e.pointerId;
       this._pointerDownX = e.clientX;
       this._pointerDownY = e.clientY;
-      this._pointerDownTime = performance.now();
       this.target.setPointerCapture(e.pointerId);
+      this.onTouchCenterHalf(e.clientX);
+    });
+    this.target.addEventListener('pointermove', (e: PointerEvent) => {
+      if (e.pointerId !== this._pointerId) return;
+      const dx = e.clientX - this._pointerDownX;
+      const dy = e.clientY - this._pointerDownY;
+      if (dx * dx + dy * dy < CONFIG.TOUCH_DRAG_SLOP_PX * CONFIG.TOUCH_DRAG_SLOP_PX) {
+        return;
+      }
+      this.tryStepTowardLane(this.clientXToLaneIndex(e.clientX));
     });
     this.target.addEventListener('pointerup', (e: PointerEvent) => {
       if (e.pointerId !== this._pointerId) return;
       this.target.releasePointerCapture(e.pointerId);
       this._pointerId = null;
-      const dt = performance.now() - this._pointerDownTime;
-      const dx = e.clientX - this._pointerDownX;
-      const dy = e.clientY - this._pointerDownY;
-      if (dt > CONFIG.SWIPE_MAX_TIME) return;
-      if (Math.abs(dx) < CONFIG.SWIPE_THRESHOLD || Math.abs(dx) < Math.abs(dy)) return;
-      if (dx < 0) this.tryBeginSwitch(-1);
-      else this.tryBeginSwitch(1);
     });
     this.target.addEventListener('pointercancel', (e: PointerEvent) => {
       if (e.pointerId !== this._pointerId) return;

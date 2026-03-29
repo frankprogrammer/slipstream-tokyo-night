@@ -89,7 +89,7 @@ window.addEventListener('resize', () => {
 const gameState = new GameState();
 const laneSystem = new LaneSystem(container);
 const playerTaxi = new PlayerTaxi();
-const roadManager = new RoadManager(CONFIG.TAXI_POSITION_Z);
+let roadManager: RoadManager | undefined;
 const trafficSpawner = new TrafficSpawner();
 const collisionSystem = new CollisionSystem();
 const cameraController = new CameraController(camera);
@@ -107,13 +107,6 @@ container.addEventListener('pointerdown', () => gameAudio.unlock(), {
   once: true,
 });
 
-scene.add(roadManager.group);
-scene.add(trafficSpawner.group);
-scene.add(slipstreamWind.group);
-scene.add(playerTaxi.group);
-scene.add(rainSystem.group);
-scene.add(slingshotTrail.group);
-
 let runTimeMs = 0;
 let distanceUnits = 0;
 let burstRemainMs = 0;
@@ -127,7 +120,7 @@ function resetGame(): void {
   distanceUnits = 0;
   burstRemainMs = 0;
   slingshotBaseBonus = 0;
-  roadManager.reset();
+  roadManager?.reset();
   trafficSpawner.reset();
   slipstreamWind.reset();
   playerTaxi.reset();
@@ -158,8 +151,6 @@ gameState.onChange(state => {
     gameOverScreen.show(score, chainManager.maxChainThisRun, distanceUnits);
   }
 });
-
-resetGame();
 
 const clock = new THREE.Clock();
 
@@ -206,7 +197,7 @@ function animate(): void {
       (burstRemainMs > 0 ? CONFIG.SLINGSHOT_SPEED_BURST : 0);
     const scrollDz = scrollPerFrame * 60 * delta;
 
-    roadManager.update(scrollDz);
+    roadManager?.update(scrollDz);
     trafficSpawner.update(delta, runTimeMs, scrollPerFrame);
     const laneX = laneSystem.getLaneX(nowMs);
     const roll = laneSystem.getBodyRollRad(nowMs);
@@ -298,7 +289,17 @@ function animate(): void {
   composer.render();
 }
 
-animate();
+void (async () => {
+  roadManager = await RoadManager.create(CONFIG.TAXI_POSITION_Z);
+  scene.add(roadManager.group);
+  scene.add(trafficSpawner.group);
+  scene.add(slipstreamWind.group);
+  scene.add(playerTaxi.group);
+  scene.add(rainSystem.group);
+  scene.add(slingshotTrail.group);
+  resetGame();
+  animate();
+})();
 
 console.log(
   'Slipstream: Tokyo Night — Phase 2 (slipstream / chain / score). ?fps=1 for FPS overlay.'

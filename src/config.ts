@@ -49,8 +49,20 @@ export const CONFIG = {
 
   // ── Road ──
   ROAD_SEGMENT_LENGTH: 20,
-  ROAD_VISIBLE_SEGMENTS: 8,
+  ROAD_VISIBLE_SEGMENTS: 5,
+  /** Lanes, collision, traffic — playable corridor width (world units). */
   ROAD_WIDTH: 10,
+  /**
+   * World X span of the imported road mesh after scale (visual only).
+   * Match `ROAD_SEGMENT_LENGTH` for a square 20×20 segment; keep `ROAD_WIDTH` smaller so lanes stay centered.
+   */
+  ROAD_SEGMENT_VISUAL_WIDTH: 20,
+  /** When set (e.g. `/road1.glb` in `public/`), each segment clones this GLB; set `null` for procedural road. */
+  ROAD_SEGMENT_GLB: '/road1.glb',
+  /** Authoring width across the road (Blender units); 0 = use bounding box. */
+  ROAD_SEGMENT_GLB_WIDTH: 20,
+  /** Authoring length along the road (Z); 0 = use bounding box. */
+  ROAD_SEGMENT_GLB_DEPTH: 20,
   /** World units per asphalt texture tile (repeat on road plane). */
   ROAD_ASPHALT_TILE_WORLD: 2.75,
   /** Dashed lane divider along segment +Z. */
@@ -61,12 +73,6 @@ export const CONFIG = {
   ROAD_LANE_EDGE_INSET: 0.38,
   /** Lane marking emissive intensity (bloom; keep modest). */
   ROAD_LANE_MARKING_EMISSIVE: 0.18,
-  /** Chance per road side per segment to spawn a roadside neon sign (0–1). */
-  PROP_DENSITY: 0.6,
-  /** X distance from road center to neon sign (past curb). */
-  ROAD_NEON_OFFSET_X: 0.55,
-  /** Neon sign face emissive intensity (bloom). */
-  ROAD_NEON_EMISSIVE: 1.15,
   FOG_NEAR: 15,
   FOG_FAR: 60,
   FOG_COLOR: 0x08050e,
@@ -345,7 +351,13 @@ export const CONFIG = {
     UI_TEXT: 0xf0e8ff,
   },
 
-  // ── Swipe Input ──
+  // ── Touch / pointer (lane input) ──
+  /** Half-screen tap ignores touches within this many px of horizontal center. */
+  TOUCH_CENTER_DEAD_ZONE_PX: 20,
+  /** Pointermove lane-steering only after finger moves this far from pointerdown (avoids double input with tap). */
+  TOUCH_DRAG_SLOP_PX: 16,
+
+  // ── Swipe Input (legacy; lane uses touch zones — kept for reference) ──
   SWIPE_THRESHOLD: 30,
   SWIPE_MAX_TIME: 300,
 
@@ -368,13 +380,4 @@ export const TRAFFIC_PAINT_COLORS = [
   CONFIG.PALETTE.NEON_BLUE,
   CONFIG.PALETTE.NEON_PURPLE,
   CONFIG.PALETTE.NEON_ORANGE,
-] as const;
-
-/** Roadside neon signs — all `PALETTE` neons + accent (tune variety). */
-export const NEON_SIGN_COLORS = [
-  CONFIG.PALETTE.NEON_PINK,
-  CONFIG.PALETTE.NEON_BLUE,
-  CONFIG.PALETTE.NEON_PURPLE,
-  CONFIG.PALETTE.NEON_ORANGE,
-  CONFIG.PALETTE.TAXI_ROOF_LIGHT,
 ] as const;

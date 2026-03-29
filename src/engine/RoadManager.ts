@@ -1,5 +1,7 @@
 import * as THREE from 'three';
-import { CONFIG, NEON_SIGN_COLORS } from '../config';
+import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { CONFIG } from '../config';
 
 /**
  * Procedural dark asphalt albedo map (CanvasTexture, tiled on road planes).
@@ -27,7 +29,6 @@ function createAsphaltTexture(): THREE.CanvasTexture {
   }
   ctx.putImageData(img, 0, 0);
 
-  // Subtle horizontal wear streaks
   ctx.globalAlpha = 0.06;
   ctx.fillStyle = '#000000';
   for (let y = 0; y < size; y += 6 + Math.floor(Math.random() * 8)) {
@@ -43,63 +44,58 @@ function createAsphaltTexture(): THREE.CanvasTexture {
   return tex;
 }
 
-function hash01(n: number): number {
-  const t = Math.sin(n * 12.9898) * 43758.5453123;
-  return t - Math.floor(t);
-}
-
 /**
- * Roadside neon: emissive billboard + dark pole (palette colors only).
- * Deterministic per segment index + side so recycling stays stable.
+ * Scale + pivot imported road mesh to `ROAD_SEGMENT_VISUAL_WIDTH` × `ROAD_SEGMENT_LENGTH` (XZ) and sit on y=0.
+ * Gameplay lanes still use `ROAD_WIDTH` (typically narrower, centered).
  */
-function addNeonSignToSegment(
-  root: THREE.Group,
-  segmentIndex: number,
-  side: -1 | 1,
-  L: number,
-  halfW: number
-): void {
-  const seed = segmentIndex * 97 + side * 53;
-  if (hash01(seed) >= CONFIG.PROP_DENSITY) return;
+function fitRoadGltfToSegment(gltf: GLTF): THREE.Group {
+  const wrapper = new THREE.Group();
+  const node = gltf.scene.clone(true);
+  wrapper.add(node);
 
-  const zJitter = (hash01(seed + 1) - 0.5) * (L - 5.5);
-  const ci =
-    Math.floor(hash01(seed + 2) * NEON_SIGN_COLORS.length) % NEON_SIGN_COLORS.length;
-  const colorHex = NEON_SIGN_COLORS[ci]!;
+  node.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(node);
+  const size = new THREE.Vector3();
+  box.getSize(size);
+  if (size.x < 1e-4 || size.z < 1e-4) {
+    console.warn('RoadManager: GLB has very small bounds; skipping scale fit');
+    return wrapper;
+  }
 
-  const xSign = side * (halfW + CONFIG.ROAD_NEON_OFFSET_X);
-  const poleH = 1.35;
-  const poleMat = new THREE.MeshStandardMaterial({
-    color: 0x1a1a20,
-    roughness: 0.94,
-    metalness: 0.18,
-  });
-  const pole = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.065, 0.085, poleH, 6),
-    poleMat
-  );
-  pole.position.set(xSign, poleH / 2, zJitter);
-  root.add(pole);
+  const widthRef =
+    CONFIG.ROAD_SEGMENT_GLB_WIDTH > 0
+      ? CONFIG.ROAD_SEGMENT_GLB_WIDTH
+      : size.x;
+  const depthRef =
+    CONFIG.ROAD_SEGMENT_GLB_DEPTH > 0
+      ? CONFIG.ROAD_SEGMENT_GLB_DEPTH
+      : size.z;
+  if (widthRef < 1e-4 || depthRef < 1e-4) {
+    console.warn('RoadManager: GLB width/depth refs invalid; skipping scale fit');
+    return wrapper;
+  }
 
-  const faceMat = new THREE.MeshStandardMaterial({
-    color: colorHex,
-    emissive: colorHex,
-    emissiveIntensity: CONFIG.ROAD_NEON_EMISSIVE,
-    roughness: 0.22,
-    metalness: 0.06,
-  });
-  const bh = 1.28;
-  const board = new THREE.Mesh(
-    new THREE.BoxGeometry(1.05, bh, 0.14),
-    faceMat
-  );
-  board.position.set(xSign + side * 0.07, poleH + bh / 2, zJitter);
-  root.add(board);
+  const sx = CONFIG.ROAD_SEGMENT_VISUAL_WIDTH / widthRef;
+  const sz = CONFIG.ROAD_SEGMENT_LENGTH / depthRef;
+  const sy = (sx + sz) * 0.5;
+  node.scale.set(sx, sy, sz);
+  node.updateMatrixWorld(true);
+
+  const box2 = new THREE.Box3().setFromObject(node);
+  const center = new THREE.Vector3();
+  box2.getCenter(center);
+  node.position.x -= center.x;
+  node.position.z -= center.z;
+  node.position.y -= box2.min.y;
+  node.updateMatrixWorld(true);
+
+  wrapper.name = 'RoadSegmentGLB';
+  return wrapper;
 }
 
 /**
  * RoadManager — Infinite road from recycling segments.
- * Dark asphalt (procedural texture) + dashed lane dividers + solid edge lines.
+ * Procedural asphalt + markings, or cloned `CONFIG.ROAD_SEGMENT_GLB` per segment.
  */
 export class RoadManager {
   readonly group = new THREE.Group();
@@ -112,10 +108,55 @@ export class RoadManager {
   private readonly playerZ: number;
   private readonly recycleBehind = 40;
 
-  constructor(playerZ: number) {
+  /** Use `create()` — loads GLB when `CONFIG.ROAD_SEGMENT_GLB` is set. */
+  private constructor(playerZ: number, glbTemplate: THREE.Group | null) {
     this.playerZ = playerZ;
     this.group.name = 'RoadGroup';
 
+    if (glbTemplate) {
+      this.buildGlbSegments(glbTemplate);
+    } else {
+      this.buildProceduralSegments();
+    }
+  }
+
+  static async create(playerZ: number): Promise<RoadManager> {
+    const path = CONFIG.ROAD_SEGMENT_GLB;
+    if (path && path.length > 0) {
+      try {
+        const loader = new GLTFLoader();
+        const gltf = await loader.loadAsync(path);
+        const template = fitRoadGltfToSegment(gltf);
+        return new RoadManager(playerZ, template);
+      } catch (e) {
+        console.warn(
+          'RoadManager: failed to load ROAD_SEGMENT_GLB; using procedural road',
+          e
+        );
+      }
+    }
+    return new RoadManager(playerZ, null);
+  }
+
+  private buildGlbSegments(template: THREE.Group): void {
+    const L = CONFIG.ROAD_SEGMENT_LENGTH;
+    const N = CONFIG.ROAD_VISIBLE_SEGMENTS;
+    const firstCenter = this.playerZ - this.recycleBehind + L * 0.5;
+
+    for (let i = 0; i < N; i++) {
+      const root = new THREE.Group();
+      const zCenter = firstCenter + i * L;
+      root.position.z = zCenter;
+
+      const road = template.clone(true);
+      root.add(road);
+
+      this.group.add(root);
+      this.segments.push({ root, zCenter });
+    }
+  }
+
+  private buildProceduralSegments(): void {
     const asphaltMap = createAsphaltTexture();
     const L = CONFIG.ROAD_SEGMENT_LENGTH;
     const halfW = CONFIG.ROAD_WIDTH / 2;
@@ -158,7 +199,7 @@ export class RoadManager {
     const mw = CONFIG.ROAD_LANE_MARKING_WIDTH;
     const dividerXs = [-CONFIG.LANE_WIDTH / 2, CONFIG.LANE_WIDTH / 2];
 
-    const firstCenter = playerZ - this.recycleBehind + L * 0.5;
+    const firstCenter = this.playerZ - this.recycleBehind + L * 0.5;
     for (let i = 0; i < N; i++) {
       const root = new THREE.Group();
       const zCenter = firstCenter + i * L;
@@ -182,7 +223,6 @@ export class RoadManager {
         }
       }
 
-      // Solid edge lines (inset from barriers)
       const edgeInset = CONFIG.ROAD_LANE_EDGE_INSET;
       const edgeW = CONFIG.ROAD_LANE_MARKING_WIDTH * 0.85;
       const edgeGeo = new THREE.PlaneGeometry(edgeW, L - 3);
@@ -201,9 +241,6 @@ export class RoadManager {
       const rightEdge = new THREE.Mesh(curbGeo, edgeMat);
       rightEdge.position.set(halfW, 0.05, 0);
       root.add(rightEdge);
-
-      addNeonSignToSegment(root, i, -1, L, halfW);
-      addNeonSignToSegment(root, i, 1, L, halfW);
 
       this.group.add(root);
       this.segments.push({ root, zCenter });
