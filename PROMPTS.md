@@ -6,6 +6,48 @@ User prompts only (assistant replies are not logged).
 
 ---
 
+### 2026-03-30 6:16 AM PDT
+
+I previously developed a demo of this game for 2D using Phaser. The touch controls of that are exactly what I want. Please examine LaneSystem.ts at the root of this project and implement the same touch controls in this game without Phaser.
+
+---
+
+### 2026-03-30 6:17 AM PDT
+
+do not draw the road or lines at all. only the meshes from ROAD_ENVIRONMENTS are too be used
+
+---
+
+### 2026-03-30 6:18 AM PDT
+
+reduce the game over text elements size by 25%
+
+---
+
+### 2026-03-30 6:25 AM PDT
+
+These touch controls are still not right. for reference. pressing Left or A moves the car to the right. pressing Right or D moves the car to the left. If the car is in the middlane and i tap the right lane, the car moves left one lane. If i tap the exact same point again in the right lane, the car now moves back to the middle. the touch move controls dont seem to do anything
+
+---
+
+### 2026-03-30 6:45 AM PDT
+
+create a mesh at at the position of the player that represents the coordinate arrows. They should point in the positive direction of the x, y, and z axis and be colored red, green, and blue respectively. they should be about 5 units long each
+
+---
+
+### 2026-03-30 6:57 AM PDT
+
+These touch control are still incorrect. remember that positive x is to the left of the player taxi. I
+
+---
+
+### 2026-03-30 7:05 AM PDT
+
+touch input should be taking account the actual position of the camera and field of view since that does change when choosing what lane the player clicked on
+
+---
+
 ### 2026-03-27 8:43 PM PDT
 
 On every user message in this thread, append the full text of that message to PROMPTS.md with a timestamp and markdown separator. Create the file if missing. Log only user prompts, not assistant replies.
