@@ -205,6 +205,27 @@ export const CONFIG = {
   TRAFFIC_HEADLIGHT_BEAM_SOFT_OPACITY: 0.088,
   /** Max XZ distance to match slipstream snapshot → pool car (cars move between frames). */
   TRAFFIC_HEADLIGHT_MATCH_MAX_DIST: 12,
+  /**
+   * Flow rails: deterministic lane rhythm bursts for "learnable flow-state" moments.
+   * Rails override random lane picks for a short sequence, then return to normal traffic.
+   */
+  FLOW_RAILS_ENABLED: true,
+  /** Do not start rails before this run time (ms). */
+  FLOW_RAILS_START_MS: 10000,
+  /** Normal spawns between rail sequences. */
+  FLOW_RAILS_GAP_SPAWNS: 8,
+  /** Spawn-rate multiplier while rail is active (<1 = denser rhythm). */
+  FLOW_RAILS_SPAWN_RATE_SCALE: 0.8,
+  /** Reduce speed randomness during rail for cleaner, more readable patterns. */
+  FLOW_RAILS_SPEED_VARIANCE_SCALE: 0.35,
+  /** Lane sequences; each row is one rail pattern (cycled in order). */
+  FLOW_RAILS_PATTERNS: [
+    [1, 0, 1, 2, 1, 0],
+    [0, 1, 2, 1, 0, 1],
+    [1, 2, 1, 0, 1, 2],
+    [0, 1, 2, 1, 0, 1],
+    [2, 1, 0, 1, 2, 1],
+  ] as readonly (readonly number[])[],
 
   // ── Player Taxi ──
   TAXI_BODY_ROLL: -10,

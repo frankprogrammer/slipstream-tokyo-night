@@ -37,6 +37,10 @@ export class TrafficSpawner {
   private spawnAccMs = 0;
   private readonly despawnBehindZ = 25;
   private draftTailHighlight: PoolEntry | null = null;
+  private spawnsSinceRail = 0;
+  private railPatternIndex = 0;
+  private railStepIndex = 0;
+  private railActive = false;
 
   constructor() {
     this.group.name = 'TrafficGroup';
@@ -76,6 +80,10 @@ export class TrafficSpawner {
   reset(): void {
     // Pre-warm so the first spawn fires on the first update (otherwise ~spawnRate ms wait).
     this.spawnAccMs = CONFIG.TRAFFIC_PHASES[0].spawnRate;
+    this.spawnsSinceRail = 0;
+    this.railPatternIndex = 0;
+    this.railStepIndex = 0;
+    this.railActive = false;
     for (const p of this.pool) {
       p.active = false;
       p.group.visible = false;
@@ -95,7 +103,50 @@ export class TrafficSpawner {
     return (index - 1) * CONFIG.LANE_WIDTH;
   }
 
-  private pickLane(phase: TrafficPhase): number {
+  private startNextRail(): void {
+    this.railActive = true;
+    this.railStepIndex = 0;
+  }
+
+  private getCurrentRailPattern(): readonly number[] {
+    const all = CONFIG.FLOW_RAILS_PATTERNS;
+    return all[this.railPatternIndex % all.length] ?? [];
+  }
+
+  private resolveRailLaneToPhase(phase: TrafficPhase, desiredLane: number): number {
+    if (phase.lanes.includes(desiredLane)) return desiredLane;
+    let best = phase.lanes[0]!;
+    let bestDist = Math.abs(best - desiredLane);
+    for (const lane of phase.lanes) {
+      const d = Math.abs(lane - desiredLane);
+      if (d < bestDist) {
+        best = lane;
+        bestDist = d;
+      }
+    }
+    return best;
+  }
+
+  private shouldStartRail(elapsedMs: number, phase: TrafficPhase): boolean {
+    if (!CONFIG.FLOW_RAILS_ENABLED) return false;
+    if (this.railActive) return false;
+    if (CONFIG.FLOW_RAILS_PATTERNS.length === 0) return false;
+    if (elapsedMs < CONFIG.FLOW_RAILS_START_MS) return false;
+    if (phase.lanes.length < 2) return false;
+    return this.spawnsSinceRail >= CONFIG.FLOW_RAILS_GAP_SPAWNS;
+  }
+
+  private pickLane(phase: TrafficPhase, elapsedMs: number): number {
+    if (this.shouldStartRail(elapsedMs, phase)) {
+      this.startNextRail();
+    }
+    if (this.railActive) {
+      const pattern = this.getCurrentRailPattern();
+      if (pattern.length > 0) {
+        const rawLane = pattern[this.railStepIndex % pattern.length]!;
+        return this.resolveRailLaneToPhase(phase, rawLane);
+      }
+    }
     const lanes = phase.lanes;
     return lanes[Math.floor(Math.random() * lanes.length)]!;
   }
@@ -201,8 +252,9 @@ export class TrafficSpawner {
     const idle = this.pool.find(p => !p.active);
     if (!idle) return;
     const phase = this.getPhase(elapsedMs);
-    const lane = this.pickLane(phase);
-    const variance = 1 + (Math.random() * 2 - 1) * phase.speedVariance;
+    const lane = this.pickLane(phase, elapsedMs);
+    const varianceScale = this.railActive ? CONFIG.FLOW_RAILS_SPEED_VARIANCE_SCALE : 1;
+    const variance = 1 + (Math.random() * 2 - 1) * phase.speedVariance * varianceScale;
     idle.laneIndex = lane;
     idle.speedMul = Math.max(0.4, variance);
     idle.active = true;
@@ -212,11 +264,27 @@ export class TrafficSpawner {
     let z = CONFIG.TAXI_POSITION_Z + CONFIG.TRAFFIC_SPAWN_AHEAD_Z + jitter;
     z = this.resolveSpawnZ(lane, idle, z);
     idle.group.position.set(this.laneIndexToX(lane), 0, z);
+
+    if (this.railActive) {
+      this.railStepIndex += 1;
+      const pattern = this.getCurrentRailPattern();
+      if (pattern.length === 0 || this.railStepIndex >= pattern.length) {
+        this.railActive = false;
+        this.railStepIndex = 0;
+        this.railPatternIndex = (this.railPatternIndex + 1) % Math.max(1, CONFIG.FLOW_RAILS_PATTERNS.length);
+        this.spawnsSinceRail = 0;
+      }
+    } else {
+      this.spawnsSinceRail += 1;
+    }
   }
 
   update(deltaSec: number, elapsedMs: number, scrollPerFrame: number): void {
     const phase = this.getPhase(elapsedMs);
-    const spawnInterval = phase.spawnRate;
+    const spawnInterval =
+      this.railActive
+        ? phase.spawnRate * CONFIG.FLOW_RAILS_SPAWN_RATE_SCALE
+        : phase.spawnRate;
     this.spawnAccMs += deltaSec * 1000;
     while (this.spawnAccMs >= spawnInterval) {
       this.spawnAccMs -= spawnInterval;
