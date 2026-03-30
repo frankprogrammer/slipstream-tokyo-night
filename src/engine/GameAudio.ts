@@ -36,6 +36,7 @@ export class GameAudio {
 
   /** Call once from a user gesture so AudioContext can start (autoplay unlock). */
   unlock(): void {
+    if (!CONFIG.AUDIO_ENABLED) return;
     const AC =
       window.AudioContext ||
       (window as unknown as { webkitAudioContext: typeof AudioContext })
@@ -119,6 +120,7 @@ export class GameAudio {
   }
 
   update(delta: number, u: GameAudioUpdate): void {
+    if (!CONFIG.AUDIO_ENABLED) return;
     this.music?.update(delta, u.playing, u.chain);
     if (this.musicBus) {
       this.musicBus.gain.value = CONFIG.AUDIO_MUSIC_ENABLED
@@ -180,6 +182,7 @@ export class GameAudio {
   }
 
   playSlingshot(): void {
+    if (!CONFIG.AUDIO_ENABLED) return;
     if (!this.ctx || !this.sfxBus) return;
     const ctx = this.ctx;
     const t0 = ctx.currentTime;
@@ -213,6 +216,7 @@ export class GameAudio {
   }
 
   playMilestone(chain: number): void {
+    if (!CONFIG.AUDIO_ENABLED) return;
     if (!this.ctx || !this.sfxBus) return;
     const ctx = this.ctx;
     const peak = CONFIG.AUDIO_MILESTONE_GAIN;
@@ -251,6 +255,7 @@ export class GameAudio {
   }
 
   playCrash(): void {
+    if (!CONFIG.AUDIO_ENABLED) return;
     if (!this.ctx || !this.sfxBus) return;
     const ctx = this.ctx;
     const t0 = ctx.currentTime;

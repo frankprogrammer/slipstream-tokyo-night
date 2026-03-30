@@ -6,6 +6,24 @@ User prompts only (assistant replies are not logged).
 
 ---
 
+### 2026-03-30 12:51 PM PDT
+
+remove all sound effects
+
+---
+
+### 2026-03-30 12:43 PM PDT
+
+Right now the slipstream boost is a temporary boost plus a small constant Boost I want to get rid of the temporary boost and and just make a larger constant boost. I still want to keep the slipstream effects happening for the current amount of time.
+
+---
+
+### 2026-03-30 10:19 AM PDT
+
+I now want to to taket his design and start adding slight curves to hit. help me figure out how i would generate curved assets to quickly expand this.
+
+---
+
 ### 2026-03-30 7:30 AM PDT
 
 lets try chaging the easeOutCubic to easeInCubic instead

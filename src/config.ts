@@ -34,7 +34,7 @@ export const CONFIG = {
   CAMERA_FRAMING_DISTANCE_GAIN: 0.65,
   CAMERA_ANGLE: -45,
   CAMERA_FOV_BASE: 55,
-  CAMERA_FOV_MAX: 40,
+  CAMERA_FOV_MAX: 65,
   /** Per-frame lerp factor toward target FOV (higher chain → wider, up to FOV_MAX). */
   CAMERA_FOV_LERP: 0.02,
   /** Linear ramp: FOV reaches FOV_MAX when chain ≥ this (×1 = FOV_BASE). */
@@ -102,9 +102,9 @@ export const CONFIG = {
 
   // ── Speed (scrollPerFrame units; see main.ts `effectiveBaseScroll`) ──
   /** Starting base scroll at run start (before time ramp / slingshot bonus). */
-  BASE_SCROLL_SPEED: 0.15,
-  /** Hard cap on base scroll (time ramp + slingshot bonus included; burst adds on top). */
-  MAX_SCROLL_SPEED: 0.4,
+  BASE_SCROLL_SPEED: 0.2,
+  /** Hard cap on base scroll (time ramp + slingshot bonus included). */
+  MAX_SCROLL_SPEED: 0.5,
   /**
    * Linear ramp over run time: adds up to `(MAX − BASE)` by `runTimeMs × this`.
    * Example: BASE 0.15, MAX 0.8 → headroom 0.65; at 0.00005/ms, full ramp ≈ 13s.
@@ -113,11 +113,11 @@ export const CONFIG = {
   SLINGSHOT_SPEED_BURST: 0.1,
   SLINGSHOT_BURST_DURATION: 750,
   /** Added to base scroll on each successful slipstream release (same units as BASE_SCROLL_SPEED). */
-  SLINGSHOT_BASE_SPEED_INCREMENT: 0.01,
+  SLINGSHOT_BASE_SPEED_INCREMENT: 0.03,
 
   // ── Slipstream ──
   SLIPSTREAM_ZONE_WIDTH: 2.0,
-  SLIPSTREAM_ZONE_DEPTH: 6,
+  SLIPSTREAM_ZONE_DEPTH: 10,
   /** Per-frame @ 60Hz base fill; actual fill × (current scrollPerFrame / BASE_SCROLL_SPEED). */
   DRAFT_FILL_RATE: 0.05,
   /** Horizontal draft fill bar on taxi hood (local +X width, inset from front bumper toward −Z). */
@@ -276,6 +276,8 @@ export const CONFIG = {
   CHAIN_POP_DURATION: 200,
 
   // ── Audio (Phase 4 step 32 — procedural Web Audio; tunable) ──
+  /** Global audio kill switch (loops, one-shots, and music). */
+  AUDIO_ENABLED: false,
   /** Master gain before destination (0–1). */
   AUDIO_MASTER: 0.38,
   /** When false, the taxi engine loop is silent (wind, draft, music, one-shots unchanged). */

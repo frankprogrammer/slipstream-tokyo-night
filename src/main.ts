@@ -237,9 +237,8 @@ function animate(): void {
         base + timeRamp + slingshotBaseBonus,
         maxScroll
       );
-      const scrollPerFrame =
-        baseScroll +
-        (burstRemainMs > 0 ? CONFIG.SLINGSHOT_SPEED_BURST : 0);
+      // Slingshot now contributes only to persistent base bonus; no temporary speed burst.
+      const scrollPerFrame = baseScroll;
       const scrollDz = scrollPerFrame * 60 * delta;
 
       roadManager?.update(scrollDz);
