@@ -219,7 +219,7 @@ implement step 31
 ### 2026-03-28 8:50 AM PDT
 
 i set up github pages choosing the github actions and static html options. the page loads but i dont see any meshes. this is the error: Navigated to https://frankprogrammer.github.io/slipstream-tokyo-night/
-slipstream-tokyo-night/:188  GET https://frankprogrammer.github.io/src/main.ts net::ERR_ABORTED 404 (Not Found)
+slipstream-tokyo-night/:188 GET https://frankprogrammer.github.io/src/main.ts net::ERR_ABORTED 404 (Not Found)
 
 ---
 

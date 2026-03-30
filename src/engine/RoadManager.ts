@@ -3,47 +3,6 @@ import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { CONFIG } from '../config';
 
-/**
- * Procedural dark asphalt albedo map (CanvasTexture, tiled on road planes).
- * Engine uses CONFIG.PALETTE only — no image assets.
- */
-function createAsphaltTexture(): THREE.CanvasTexture {
-  const size = 256;
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('RoadManager: 2D canvas context unavailable');
-
-  const base = new THREE.Color(CONFIG.PALETTE.ROAD_DARK);
-  ctx.fillStyle = `#${base.getHexString()}`;
-  ctx.fillRect(0, 0, size, size);
-
-  const img = ctx.getImageData(0, 0, size, size);
-  const d = img.data;
-  for (let i = 0; i < d.length; i += 4) {
-    const n = (Math.random() - 0.5) * 22;
-    d[i] = Math.max(0, Math.min(255, d[i]! + n));
-    d[i + 1] = Math.max(0, Math.min(255, d[i + 1]! + n));
-    d[i + 2] = Math.max(0, Math.min(255, d[i + 2]! + n));
-  }
-  ctx.putImageData(img, 0, 0);
-
-  ctx.globalAlpha = 0.06;
-  ctx.fillStyle = '#000000';
-  for (let y = 0; y < size; y += 6 + Math.floor(Math.random() * 8)) {
-    ctx.fillRect(0, y, size, 1 + Math.random());
-  }
-  ctx.globalAlpha = 1;
-
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 4;
-  return tex;
-}
-
 function hash01(n: number): number {
   const t = Math.sin(n * 12.9898) * 43758.5453123;
   return t - Math.floor(t);
@@ -132,19 +91,6 @@ function fitGltfToSegmentFootprint(
   return wrapper;
 }
 
-function fitRoadGltfToSegment(gltf: GLTF): THREE.Group {
-  return fitGltfToSegmentFootprint(
-    gltf,
-    CONFIG.ROAD_SEGMENT_VISUAL_WIDTH,
-    CONFIG.ROAD_SEGMENT_LENGTH,
-    CONFIG.ROAD_SEGMENT_GLB_WIDTH,
-    CONFIG.ROAD_SEGMENT_GLB_DEPTH,
-    'RoadSegmentGLB',
-    false,
-    'bboxBottom'
-  );
-}
-
 function fitEnvGltfToSegment(gltf: GLTF): THREE.Group {
   return fitGltfToSegmentFootprint(
     gltf,
@@ -201,8 +147,8 @@ async function loadEnvTemplates(
 }
 
 /**
- * RoadManager — Infinite road from recycling segments.
- * Procedural asphalt + markings, or cloned `CONFIG.ROAD_SEGMENT_GLB` per segment.
+ * RoadManager — Infinite corridor from recycling segment roots.
+ * Draws only `CONFIG.ROAD_ENVIRONMENTS` GLBs (no procedural plane, lane lines, or `ROAD_SEGMENT_GLB`).
  */
 type RoadSegmentSlot = {
   root: THREE.Group;
@@ -221,42 +167,19 @@ export class RoadManager {
   private nextSegmentIndex: number;
   private readonly envTemplates: Map<string, THREE.Group> | null;
 
-  /** Use `create()` — loads GLB when `CONFIG.ROAD_SEGMENT_GLB` is set. */
-  private constructor(
-    playerZ: number,
-    glbTemplate: THREE.Group | null,
-    envTemplates: Map<string, THREE.Group>
-  ) {
+  private constructor(playerZ: number, envTemplates: Map<string, THREE.Group>) {
     this.playerZ = playerZ;
     this.group.name = 'RoadGroup';
     this.envTemplates = envTemplates.size > 0 ? envTemplates : null;
     this.nextSegmentIndex = CONFIG.ROAD_VISIBLE_SEGMENTS;
 
-    if (glbTemplate) {
-      this.buildGlbSegments(glbTemplate);
-    } else {
-      this.buildProceduralSegments();
-    }
+    this.buildSegments();
   }
 
   static async create(playerZ: number): Promise<RoadManager> {
     const loader = new GLTFLoader();
     const envTemplates = await loadEnvTemplates(loader);
-
-    const path = CONFIG.ROAD_SEGMENT_GLB as string | null;
-    if (path !== null && path.length > 0) {
-      try {
-        const gltf = await loader.loadAsync(path);
-        const template = fitRoadGltfToSegment(gltf);
-        return new RoadManager(playerZ, template, envTemplates);
-      } catch (e) {
-        console.warn(
-          'RoadManager: failed to load ROAD_SEGMENT_GLB; using procedural road',
-          e
-        );
-      }
-    }
-    return new RoadManager(playerZ, null, envTemplates);
+    return new RoadManager(playerZ, envTemplates);
   }
 
   private makeEnvHolder(): THREE.Group | null {
@@ -278,14 +201,8 @@ export class RoadManager {
     seg.envHolder.add(tmpl.clone(true));
   }
 
-  private pushSegment(
-    root: THREE.Group,
-    zCenter: number,
-    segmentIndex: number,
-    buildRoad: (root: THREE.Group) => void
-  ): void {
+  private pushSegment(root: THREE.Group, zCenter: number, segmentIndex: number): void {
     const envHolder = this.makeEnvHolder();
-    buildRoad(root);
     if (envHolder) {
       root.add(envHolder);
     }
@@ -302,7 +219,8 @@ export class RoadManager {
     this.segments.push(seg);
   }
 
-  private buildGlbSegments(template: THREE.Group): void {
+  /** Segment roots + `ROAD_ENVIRONMENTS` clones only (no separate road mesh). */
+  private buildSegments(): void {
     const L = CONFIG.ROAD_SEGMENT_LENGTH;
     const N = CONFIG.ROAD_VISIBLE_SEGMENTS;
     const firstCenter = this.playerZ - this.recycleBehind + L * 0.5;
@@ -312,99 +230,7 @@ export class RoadManager {
       const zCenter = firstCenter + i * L;
       root.position.z = zCenter;
 
-      this.pushSegment(root, zCenter, i, (r) => {
-        r.add(template.clone(true));
-      });
-    }
-  }
-
-  private buildProceduralSegments(): void {
-    const asphaltMap = createAsphaltTexture();
-    const L = CONFIG.ROAD_SEGMENT_LENGTH;
-    const halfW = CONFIG.ROAD_WIDTH / 2;
-    asphaltMap.repeat.set(
-      CONFIG.ROAD_WIDTH / CONFIG.ROAD_ASPHALT_TILE_WORLD,
-      L / CONFIG.ROAD_ASPHALT_TILE_WORLD
-    );
-    asphaltMap.needsUpdate = true;
-
-    const roadMat = new THREE.MeshStandardMaterial({
-      color: CONFIG.PALETTE.ROAD_DARK,
-      map: asphaltMap,
-      roughness: 0.94,
-      metalness: 0.04,
-    });
-
-    const markingColor = CONFIG.PALETTE.LANE_MARKING;
-    const markingMat = new THREE.MeshStandardMaterial({
-      color: markingColor,
-      emissive: markingColor,
-      emissiveIntensity: CONFIG.ROAD_LANE_MARKING_EMISSIVE,
-      roughness: 0.45,
-      metalness: 0,
-    });
-
-    const curbColor = new THREE.Color(CONFIG.PALETTE.ROAD_DARK).lerp(
-      new THREE.Color(0x444458),
-      0.35
-    );
-    const edgeMat = new THREE.MeshStandardMaterial({
-      color: curbColor,
-      roughness: 0.92,
-      metalness: 0.08,
-    });
-
-    const N = CONFIG.ROAD_VISIBLE_SEGMENTS;
-    const dashLen = CONFIG.ROAD_LANE_DASH_LENGTH;
-    const gapLen = CONFIG.ROAD_LANE_DASH_GAP;
-    const step = dashLen + gapLen;
-    const mw = CONFIG.ROAD_LANE_MARKING_WIDTH;
-    const dividerXs = [-CONFIG.LANE_WIDTH / 2, CONFIG.LANE_WIDTH / 2];
-
-    const firstCenter = this.playerZ - this.recycleBehind + L * 0.5;
-    for (let i = 0; i < N; i++) {
-      const root = new THREE.Group();
-      const zCenter = firstCenter + i * L;
-      root.position.z = zCenter;
-
-      this.pushSegment(root, zCenter, i, (r) => {
-        const planeGeo = new THREE.PlaneGeometry(CONFIG.ROAD_WIDTH, L);
-        planeGeo.rotateX(-Math.PI / 2);
-        const road = new THREE.Mesh(planeGeo, roadMat);
-        road.position.y = 0.01;
-        r.add(road);
-
-        const startZ = -L / 2 + 2.5;
-        const endZ = L / 2 - 2.5;
-        for (const x of dividerXs) {
-          for (let z = startZ; z < endZ; z += step) {
-            const dashGeo = new THREE.PlaneGeometry(mw, dashLen);
-            dashGeo.rotateX(-Math.PI / 2);
-            const dash = new THREE.Mesh(dashGeo, markingMat);
-            dash.position.set(x, 0.02, z + dashLen / 2);
-            r.add(dash);
-          }
-        }
-
-        const edgeInset = CONFIG.ROAD_LANE_EDGE_INSET;
-        const edgeW = CONFIG.ROAD_LANE_MARKING_WIDTH * 0.85;
-        const edgeGeo = new THREE.PlaneGeometry(edgeW, L - 3);
-        edgeGeo.rotateX(-Math.PI / 2);
-        const edgeL = new THREE.Mesh(edgeGeo, markingMat);
-        edgeL.position.set(-halfW + edgeInset, 0.021, 0);
-        r.add(edgeL);
-        const edgeR = new THREE.Mesh(edgeGeo.clone(), markingMat);
-        edgeR.position.set(halfW - edgeInset, 0.021, 0);
-        r.add(edgeR);
-
-        const curbGeo = new THREE.BoxGeometry(0.15, 0.08, L);
-        const leftEdge = new THREE.Mesh(curbGeo, edgeMat);
-        leftEdge.position.set(-halfW, 0.05, 0);
-        r.add(leftEdge);
-        const rightEdge = new THREE.Mesh(curbGeo, edgeMat);
-        rightEdge.position.set(halfW, 0.05, 0);
-        r.add(rightEdge);
-      });
+      this.pushSegment(root, zCenter, i);
     }
   }
 

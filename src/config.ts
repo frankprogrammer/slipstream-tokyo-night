@@ -58,7 +58,7 @@ export const CONFIG = {
    */
   ROAD_SEGMENT_VISUAL_WIDTH: 20,
   /**
-   * GLB in `public/` (with `import.meta.env.BASE_URL` prefix if used). `null` = procedural asphalt + lane markings only.
+   * Reserved for a dedicated road mesh; RoadManager does not draw it — only `ROAD_ENVIRONMENTS` are rendered.
    */
   ROAD_SEGMENT_GLB: null,
   /** Authoring width across the road (Blender units); 0 = use bounding box. */
