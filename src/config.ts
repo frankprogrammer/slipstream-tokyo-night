@@ -34,7 +34,7 @@ export const CONFIG = {
   CAMERA_FRAMING_DISTANCE_GAIN: 0.65,
   CAMERA_ANGLE: -45,
   CAMERA_FOV_BASE: 55,
-  CAMERA_FOV_MAX: 65,
+  CAMERA_FOV_MAX: 40,
   /** Per-frame lerp factor toward target FOV (higher chain → wider, up to FOV_MAX). */
   CAMERA_FOV_LERP: 0.02,
   /** Linear ramp: FOV reaches FOV_MAX when chain ≥ this (×1 = FOV_BASE). */
@@ -104,7 +104,7 @@ export const CONFIG = {
   /** Starting base scroll at run start (before time ramp / slingshot bonus). */
   BASE_SCROLL_SPEED: 0.15,
   /** Hard cap on base scroll (time ramp + slingshot bonus included; burst adds on top). */
-  MAX_SCROLL_SPEED: 0.25,
+  MAX_SCROLL_SPEED: 0.4,
   /**
    * Linear ramp over run time: adds up to `(MAX − BASE)` by `runTimeMs × this`.
    * Example: BASE 0.15, MAX 0.8 → headroom 0.65; at 0.00005/ms, full ramp ≈ 13s.
@@ -113,7 +113,7 @@ export const CONFIG = {
   SLINGSHOT_SPEED_BURST: 0.1,
   SLINGSHOT_BURST_DURATION: 750,
   /** Added to base scroll on each successful slipstream release (same units as BASE_SCROLL_SPEED). */
-  SLINGSHOT_BASE_SPEED_INCREMENT: 8,
+  SLINGSHOT_BASE_SPEED_INCREMENT: 0.01,
 
   // ── Slipstream ──
   SLIPSTREAM_ZONE_WIDTH: 2.0,
