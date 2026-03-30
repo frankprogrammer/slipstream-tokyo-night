@@ -315,10 +315,10 @@ export const CONFIG = {
 
   // ── Post-Processing (UnrealBloom — CLAUDE.md Phase 3) ──
   /** Bloom strength; emissive + bright HDR pixels. */
-  BLOOM_INTENSITY: 0.4,
+  BLOOM_INTENSITY: 0.3,
   /** Higher = only very bright pixels bloom (keeps mid-gray road from glowing). */
   BLOOM_THRESHOLD: 0.1,
-  BLOOM_RADIUS: 0.2,
+  BLOOM_RADIUS: 0.0,
   /** Bloom buffer scale (GPU savings; <1 = half-res bloom pass). */
   BLOOM_RESOLUTION_SCALE: 0.5,
   /** ACESFilmic exposure. */
