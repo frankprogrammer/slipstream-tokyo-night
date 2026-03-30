@@ -6,6 +6,18 @@ User prompts only (assistant replies are not logged).
 
 ---
 
+### 2026-03-30 8:20 AM PDT
+
+actually when active i almost want it to be light always visible lines that go from the taillight to the bottom of the screen.
+
+---
+
+### 2026-03-30 8:18 AM PDT
+
+make them emit more frequently.
+
+---
+
 ### 2026-03-30 6:16 AM PDT
 
 I previously developed a demo of this game for 2D using Phaser. The touch controls of that are exactly what I want. Please examine LaneSystem.ts at the root of this project and implement the same touch controls in this game without Phaser.
@@ -45,6 +57,24 @@ These touch control are still incorrect. remember that positive x is to the left
 ### 2026-03-30 7:05 AM PDT
 
 touch input should be taking account the actual position of the camera and field of view since that does change when choosing what lane the player clicked on
+
+---
+
+### 2026-03-30 8:02 AM PDT
+
+right now we are seeing the slipstream chain text popup in the ui every 5 successful combos. let's make it appear after every successful slipstream. it should also appear just in front of the taxi. let's keep it as a ui element
+
+---
+
+### 2026-03-30 8:05 AM PDT
+
+right now the text is position at the same x as the player. lets  keep it centered horizontally.
+
+---
+
+### 2026-03-30 8:09 AM PDT
+
+right now when a slipstream is activated, neon beams fly out from the back of the taxi in a burst. they should instead shoot out from the taillights of the player taxi and should continue to shoot out while the boost is active. they should not be angled at all
 
 ---
 

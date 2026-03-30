@@ -316,4 +316,15 @@ export class PlayerTaxi {
     out.set(0, height * 0.35, -length / 2 - 0.02);
     this.group.localToWorld(out);
   }
+
+  /** World positions for left/right taillights (source points for boost beams). */
+  getTailLightsWorldPositions(outLeft: THREE.Vector3, outRight: THREE.Vector3): void {
+    const { height, length } = this.dims;
+    const y = height * 0.28;
+    const z = -length / 2 - 0.02;
+    outLeft.set(-0.42, y, z);
+    outRight.set(0.42, y, z);
+    this.group.localToWorld(outLeft);
+    this.group.localToWorld(outRight);
+  }
 }

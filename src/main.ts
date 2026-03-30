@@ -102,6 +102,7 @@ const rainSystem = new RainSystem();
 const slipstreamWind = new SlipstreamWindSystem();
 const slingshotTrail = new SlingshotTrailSystem();
 const gameAudio = new GameAudio();
+const milestoneAnchorWorld = new THREE.Vector3();
 
 container.addEventListener('pointerdown', () => gameAudio.unlock(), {
   once: true,
@@ -203,6 +204,8 @@ function animate(): void {
     const roll = laneSystem.getBodyRollRad(nowMs);
     const steer = laneSystem.getWheelSteerRad(nowMs);
     playerTaxi.applyLaneVisuals(laneX, roll, steer);
+    milestoneAnchorWorld.set(laneX, 1.1, CONFIG.TAXI_POSITION_Z + 2.2);
+    hud.updateMilestoneAnchor(camera, container, milestoneAnchorWorld);
 
     const slip = slipstreamZone.update(
       delta,
@@ -216,7 +219,6 @@ function animate(): void {
       trafficSpawner.enableHeadlightsAfterSlipstream(slip.slingshotTarget);
       slingshotBaseBonus += CONFIG.SLINGSHOT_BASE_SPEED_INCREMENT;
       burstRemainMs = CONFIG.SLINGSHOT_BURST_DURATION;
-      slingshotTrail.burst(playerTaxi);
       gameAudio.playSlingshot();
       const milestone = chainManager.onSlingshot(nowMs);
       if (milestone !== null) {
@@ -224,11 +226,9 @@ function animate(): void {
         gameAudio.playMilestone(milestone);
       }
       scoreManager.addSlingshotBonus(chainManager.chain);
+      hud.showMilestone(`×${chainManager.chain}`, milestone === 10);
       if (milestone === 10) {
-        hud.showMilestone('PERFECT', true);
         hud.flashScreenPerfect();
-      } else if (milestone !== null) {
-        hud.showMilestone(`×${milestone}!`, false);
       }
     }
 
@@ -251,7 +251,8 @@ function animate(): void {
       gameState.transition('gameover');
     }
 
-    slingshotTrail.update(delta, scrollDz);
+    slingshotTrail.setBoostActive(burstRemainMs > 0);
+    slingshotTrail.update(delta, scrollDz, playerTaxi);
 
     scrollForAudio = scrollPerFrame;
     slipInZone = slip.inZone;
@@ -259,9 +260,13 @@ function animate(): void {
     audioBurst = burstRemainMs > 0;
   } else {
     trafficSpawner.setDraftTailHighlight(playerTaxi.getCollisionBounds(), false);
-    slingshotTrail.update(delta, 0);
+    slingshotTrail.setBoostActive(false);
+    slingshotTrail.update(delta, 0, playerTaxi);
     cameraController.update(playerTaxi, 1);
     playerTaxi.tickRoofLight(nowMs, false, chainManager.chain);
+    const laneX = laneSystem.getLaneX(nowMs);
+    milestoneAnchorWorld.set(laneX, 1.1, CONFIG.TAXI_POSITION_Z + 2.2);
+    hud.updateMilestoneAnchor(camera, container, milestoneAnchorWorld);
   }
 
   slipstreamWind.update(delta, gameState.isPlaying, trafficSpawner);

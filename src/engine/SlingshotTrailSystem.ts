@@ -3,38 +3,33 @@ import { CONFIG } from '../config';
 import type { PlayerTaxi } from './PlayerTaxi';
 
 /**
- * Short-lived neon streaks behind the taxi on slingshot release.
- * Uses thin boxes + MeshBasicMaterial so they stay visible from the chase camera
- * (horizontal planes were nearly edge-on / buried in the road).
+ * Continuous boost beams from player taillights.
+ * While boost is active, two long neon lines stay visible from each taillight toward screen bottom (−Z).
  */
 export class SlingshotTrailSystem {
   readonly group = new THREE.Group();
 
-  private readonly streaks: {
+  private readonly beams: {
     mesh: THREE.Mesh;
     material: THREE.MeshBasicMaterial;
-    active: boolean;
-    ageMs: number;
   }[] = [];
 
-  private readonly rear = new THREE.Vector3();
+  private readonly tailL = new THREE.Vector3();
+  private readonly tailR = new THREE.Vector3();
+  private boostActive = false;
 
   constructor() {
     this.group.name = 'SlingshotTrail';
 
-    const w = CONFIG.SLINGSHOT_TRAIL_WIDTH;
-    const h = CONFIG.SLINGSHOT_TRAIL_BOX_HEIGHT;
-    const len = CONFIG.SLINGSHOT_TRAIL_LENGTH;
+    const w = CONFIG.SLINGSHOT_TRAIL_WIDTH * 0.75;
+    const h = Math.max(0.04, CONFIG.SLINGSHOT_TRAIL_BOX_HEIGHT * 0.6);
+    const len = Math.max(12, CONFIG.SLINGSHOT_TRAIL_LENGTH * 9);
     const geo = new THREE.BoxGeometry(w, h, len);
     geo.translate(0, 0, -len * 0.5);
 
-    const n = CONFIG.SLINGSHOT_TRAIL_STREAK_COUNT;
-    const pink = CONFIG.PALETTE.NEON_PINK;
-    const blue = CONFIG.PALETTE.NEON_BLUE;
-
-    for (let i = 0; i < n; i++) {
+    for (const color of [CONFIG.PALETTE.NEON_PINK, CONFIG.PALETTE.NEON_BLUE]) {
       const m = new THREE.MeshBasicMaterial({
-        color: i % 2 === 0 ? pink : blue,
+        color,
         transparent: true,
         opacity: 0,
         depthWrite: false,
@@ -44,61 +39,47 @@ export class SlingshotTrailSystem {
       mesh.frustumCulled = false;
       mesh.renderOrder = 10;
       this.group.add(mesh);
-      this.streaks.push({ mesh, material: m, active: false, ageMs: 0 });
+      this.beams.push({ mesh, material: m });
     }
   }
 
   reset(): void {
-    for (const s of this.streaks) {
-      s.active = false;
-      s.ageMs = 0;
-      s.mesh.visible = false;
-      s.material.opacity = 0;
+    this.boostActive = false;
+    for (const b of this.beams) {
+      b.mesh.visible = false;
+      b.material.opacity = 0;
     }
   }
 
-  burst(player: PlayerTaxi): void {
-    const n = CONFIG.SLINGSHOT_TRAIL_STREAK_COUNT;
-    const spread = CONFIG.TAXI_DIMENSIONS.width * 0.42;
-    const surfaceY = CONFIG.SLINGSHOT_TRAIL_SURFACE_Y;
-
-    for (let i = 0; i < n; i++) {
-      const s = this.streaks[i]!;
-      player.getRearWorldPosition(this.rear);
-
-      // Box front (local +Z) sits at rear bumper; geometry extends backward in −Z.
-      s.mesh.position.set(
-        this.rear.x + (Math.random() - 0.5) * 2 * spread,
-        surfaceY,
-        this.rear.z + (Math.random() - 0.5) * 0.35
-      );
-      s.mesh.rotation.set(0, (Math.random() - 0.5) * 0.2, 0);
-
-      s.ageMs = 0;
-      s.active = true;
-      s.mesh.visible = true;
-      s.material.opacity = 0.95;
-    }
+  setBoostActive(active: boolean): void {
+    this.boostActive = active;
   }
 
-  update(delta: number, scrollDz: number): void {
-    const dur = CONFIG.SLINGSHOT_TRAIL_DURATION_MS;
-    const scale = CONFIG.SLINGSHOT_TRAIL_SCROLL_SCALE;
+  private updateBeamAnchors(player: PlayerTaxi): void {
+    player.getTailLightsWorldPositions(this.tailL, this.tailR);
+    const left = this.beams[0]!;
+    const right = this.beams[1]!;
+    left.mesh.position.copy(this.tailL);
+    right.mesh.position.copy(this.tailR);
+    // No angle/random yaw: perfectly straight beams toward -Z.
+    left.mesh.rotation.set(0, 0, 0);
+    right.mesh.rotation.set(0, 0, 0);
+  }
 
-    for (const s of this.streaks) {
-      if (!s.active) continue;
-
-      s.ageMs += delta * 1000;
-      s.mesh.position.z -= scrollDz * scale;
-
-      const t = Math.min(1, s.ageMs / dur);
-      s.material.opacity = Math.max(0, 0.95 * (1 - t));
-
-      if (s.ageMs >= dur) {
-        s.active = false;
-        s.mesh.visible = false;
-        s.material.opacity = 0;
+  update(delta: number, _scrollDz: number, player: PlayerTaxi): void {
+    if (!this.boostActive) {
+      for (const b of this.beams) {
+        b.mesh.visible = false;
+        b.material.opacity = Math.max(0, b.material.opacity - delta * 7);
       }
+      return;
+    }
+
+    this.updateBeamAnchors(player);
+    const pulse = 0.82 + 0.16 * Math.sin(performance.now() * 0.02);
+    for (const b of this.beams) {
+      b.mesh.visible = true;
+      b.material.opacity = pulse;
     }
   }
 }
